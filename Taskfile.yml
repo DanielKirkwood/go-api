@@ -25,6 +25,16 @@ tasks:
         cmds:
             - go test ./...
 
+    fmt:
+        desc: Formats the code
+        cmds:
+            - golangci-lint fmt
+
+    lint:
+        desc: Lints the code
+        cmds:
+            - golangci-lint run
+
     clean:
         desc: Clean every generated file
         cmds:

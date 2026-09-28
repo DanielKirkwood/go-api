@@ -1,2 +1,63 @@
-// Package config will hold the EnvVars struct and feature registry (Phase 1).
+// Package config holds the EnvVars struct and the feature registry: the
+// single source of runtime configuration for the app.
 package config
+
+import (
+	"reflect"
+	"strings"
+
+	"github.com/spf13/viper"
+)
+
+// EnvVars is the full set of environment-driven settings for the app. Every
+// field must be a string and carry an `env` tag naming the environment
+// variable it binds to; an optional `default` tag supplies a fallback.
+//
+// Load() binds and populates this struct via reflection, so adding a field
+// here is sufficient to wire up a new setting — no binding code to update.
+type EnvVars struct {
+	Env      string `env:"ENV"       default:"development"`
+	LogLevel string `env:"LOG_LEVEL" default:"info"`
+	Port     string `env:"PORT"      default:"8080"`
+
+	DatabasePath string `env:"DATABASE_PATH"`
+
+	OtelExporterURL string `env:"OTEL_EXPORTER_OTLP_ENDPOINT"`
+
+	KratosPublicURL string `env:"KRATOS_PUBLIC_URL"`
+	KratosAdminURL  string `env:"KRATOS_ADMIN_URL"`
+
+	KetoReadURL  string `env:"KETO_READ_URL"`
+	KetoWriteURL string `env:"KETO_WRITE_URL"`
+
+	DisableFeatures string `env:"DISABLE_FEATURES"`
+}
+
+// Load reads EnvVars from the environment. Each field is bound to its `env`
+// tag's variable name and, if unset, falls back to its `default` tag.
+func Load() (EnvVars, error) {
+	v := viper.New()
+	v.AutomaticEnv()
+
+	for field := range reflect.TypeFor[EnvVars]().Fields() {
+		envName := field.Tag.Get("env")
+		if envName == "" {
+			continue
+		}
+
+		key := strings.ToLower(field.Name)
+		if err := v.BindEnv(key, envName); err != nil {
+			return EnvVars{}, err
+		}
+		if def, ok := field.Tag.Lookup("default"); ok {
+			v.SetDefault(key, def)
+		}
+	}
+
+	var envVars EnvVars
+	if err := v.Unmarshal(&envVars); err != nil {
+		return EnvVars{}, err
+	}
+
+	return envVars, nil
+}
