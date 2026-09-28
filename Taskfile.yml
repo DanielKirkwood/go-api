@@ -1,0 +1,31 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: "3"
+
+vars:
+    EXE: bin/go-api{{exeExt}}
+
+tasks:
+    default:
+        desc: Build and run the app
+        aliases: [run]
+        cmds:
+            - task: build
+            - ./{{.EXE}}
+
+    build:
+        desc: Builds the app
+        cmds:
+            - go build -v -o {{.EXE}}
+        generates:
+            - "{{.EXE}}"
+
+    test:
+        desc: Runs the test suite
+        cmds:
+            - go test ./...
+
+    clean:
+        desc: Clean every generated file
+        cmds:
+            - rm -f {{.EXE}}
