@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"text/tabwriter"
 
@@ -9,6 +10,8 @@ import (
 )
 
 const redacted = "<redacted>"
+
+var errAppNotBootstrapped = errors.New("cmd: app not bootstrapped on context")
 
 const (
 	tabWriterMinWidth = 0
@@ -36,12 +39,12 @@ func newInfoEnvCmd() *cobra.Command {
 		Use:   "env",
 		Short: "Print resolved environment variables",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			env, err := config.Load()
-			if err != nil {
-				return err
+			a, ok := appFromContext(cmd.Context())
+			if !ok {
+				return errAppNotBootstrapped
 			}
 
-			return printEnv(cmd, env)
+			return printEnv(cmd, a.Env)
 		},
 	}
 }
@@ -51,12 +54,12 @@ func newInfoFeaturesCmd() *cobra.Command {
 		Use:   "features",
 		Short: "Print each feature's enabled/disabled state",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			env, err := config.Load()
-			if err != nil {
-				return err
+			a, ok := appFromContext(cmd.Context())
+			if !ok {
+				return errAppNotBootstrapped
 			}
 
-			return printFeatures(cmd, env)
+			return printFeatures(cmd, a.Registry)
 		},
 	}
 }
@@ -76,15 +79,7 @@ func printEnv(cmd *cobra.Command, env config.EnvVars) error {
 	return w.Flush()
 }
 
-func printFeatures(cmd *cobra.Command, env config.EnvVars) error {
-	registry := config.DefaultRegistry()
-	if err := registry.ResolveFeatureEnabledState(env); err != nil {
-		return err
-	}
-	if err := registry.Configure(env); err != nil {
-		return err
-	}
-
+func printFeatures(cmd *cobra.Command, registry *config.Registry) error {
 	w := newTabWriter(cmd)
 
 	fmt.Fprintln(w, "FEATURE\tENABLED\tREASON")

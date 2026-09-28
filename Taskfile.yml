@@ -11,7 +11,7 @@ tasks:
         aliases: [run]
         cmds:
             - task: build
-            - ./{{.EXE}}
+            - ./{{.EXE}} {{.CLI_ARGS}}
 
     build:
         desc: Builds the app

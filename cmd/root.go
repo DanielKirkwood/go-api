@@ -5,6 +5,7 @@ import (
 	"runtime/debug"
 	"strings"
 
+	"github.com/DanielKirkwood/go-api/internal/app"
 	"github.com/DanielKirkwood/go-api/internal/config"
 	"github.com/spf13/cobra"
 )
@@ -54,7 +55,21 @@ func NewRootCmd() *cobra.Command {
 				return printEnv(cmd, env)
 			}
 
+			a, err := app.Bootstrap(cmd.Context(), env)
+			if err != nil {
+				return err
+			}
+			cmd.SetContext(withApp(cmd.Context(), a))
+
 			return nil
+		},
+		PersistentPostRunE: func(cmd *cobra.Command, _ []string) error {
+			a, ok := appFromContext(cmd.Context())
+			if !ok {
+				return nil
+			}
+
+			return a.Shutdown(cmd.Context())
 		},
 	}
 
