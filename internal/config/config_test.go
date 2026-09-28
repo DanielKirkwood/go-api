@@ -15,16 +15,24 @@ func TestLoad(t *testing.T) {
 		{
 			name: "defaults when unset",
 			env:  map[string]string{},
-			want: config.EnvVars{Env: "development", LogLevel: "info", Port: "8080"},
+			want: config.EnvVars{
+				Env: "development", LogLevel: "info",
+				PublicPort: "8080", ProtectedPort: "8081", HiddenPort: "8082",
+			},
 		},
 		{
 			name: "env vars override defaults",
 			env: map[string]string{
-				"ENV":       "production",
-				"LOG_LEVEL": "warn",
-				"PORT":      "9090",
+				"ENV":            "production",
+				"LOG_LEVEL":      "warn",
+				"PUBLIC_PORT":    "9090",
+				"PROTECTED_PORT": "9091",
+				"HIDDEN_PORT":    "9092",
 			},
-			want: config.EnvVars{Env: "production", LogLevel: "warn", Port: "9090"},
+			want: config.EnvVars{
+				Env: "production", LogLevel: "warn",
+				PublicPort: "9090", ProtectedPort: "9091", HiddenPort: "9092",
+			},
 		},
 		{
 			name: "optional fields have no default",
@@ -32,7 +40,8 @@ func TestLoad(t *testing.T) {
 				"DATABASE_PATH": "/tmp/app.db",
 			},
 			want: config.EnvVars{
-				Env: "development", LogLevel: "info", Port: "8080",
+				Env: "development", LogLevel: "info",
+				PublicPort: "8080", ProtectedPort: "8081", HiddenPort: "8082",
 				DatabasePath: "/tmp/app.db",
 			},
 		},

@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"runtime/debug"
@@ -15,11 +16,16 @@ import (
 // App holds every dependency constructed at startup: resolved config, the
 // feature registry, the logger, and the otel providers. Bootstrap builds
 // one; nothing here is a package-level singleton.
+//
+// Servers is nil until a command that serves HTTP (start and its
+// subcommands) calls BuildServers and assigns the result — commands like
+// `info` never need routers built.
 type App struct {
 	Env      config.EnvVars
 	Registry *config.Registry
 	Logger   *slog.Logger
 	Otel     *otelclient.Providers
+	Servers  *Servers
 }
 
 // Bootstrap resolves env's feature-enabled state and configures every
@@ -58,10 +64,16 @@ func Bootstrap(ctx context.Context, env config.EnvVars) (*App, error) {
 	return &App{Env: env, Registry: registry, Logger: log, Otel: providers}, nil
 }
 
-// Shutdown flushes and closes every dependency that needs it. Currently
-// that's just the otel providers; Phase 3 wires this into the real
-// signal-driven shutdown path.
+// Shutdown gracefully closes every running server (if any), then flushes
+// the otel providers. Servers are closed first so no in-flight request's
+// spans/metrics are lost to a premature otel shutdown.
 func (a *App) Shutdown(ctx context.Context) error {
+	if a.Servers != nil {
+		if err := a.Servers.Shutdown(ctx); err != nil {
+			return errors.Join(err, a.Otel.Shutdown(ctx))
+		}
+	}
+
 	return a.Otel.Shutdown(ctx)
 }
 

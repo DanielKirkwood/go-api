@@ -6,7 +6,9 @@ package config
 
 // ServiceConfig is the always-on core app config.
 type ServiceConfig struct {
-	Port string
+	PublicPort    string
+	ProtectedPort string
+	HiddenPort    string
 }
 
 // DatabaseConfig configures the SQLite connection (Phase 4).
@@ -40,7 +42,11 @@ func DefaultRegistry() *Registry {
 	r.Register(Feature{
 		Name: "service",
 		Build: func(e EnvVars) any {
-			return ServiceConfig{Port: e.Port}
+			return ServiceConfig{
+				PublicPort:    e.PublicPort,
+				ProtectedPort: e.ProtectedPort,
+				HiddenPort:    e.HiddenPort,
+			}
 		},
 	})
 

@@ -6,6 +6,9 @@ import (
 	"io"
 	"log/slog"
 	"os"
+
+	"github.com/lmittmann/tint"
+	"github.com/mattn/go-isatty"
 )
 
 // Config controls logger construction. Writer defaults to [os.Stdout] when
@@ -39,14 +42,20 @@ func New(cfg Config) (*slog.Logger, error) {
 		level = slog.LevelDebug
 	}
 
-	opts := &slog.HandlerOptions{Level: level, AddSource: cfg.Dev}
-
 	var handler slog.Handler
 	if cfg.Dev {
-		handler = slog.NewTextHandler(w, opts)
+		handler = tint.NewTextHandler(w, &tint.Options{Level: level, AddSource: true, NoColor: !isTerminal(w)})
 	} else {
-		handler = slog.NewJSONHandler(w, opts)
+		handler = slog.NewJSONHandler(w, &slog.HandlerOptions{Level: level})
 	}
 
 	return slog.New(handler), nil
+}
+
+// isTerminal reports whether w is a terminal, so tint only colorizes output
+// that's actually going to a terminal — not a redirected file or the
+// [bytes.Buffer] tests write to.
+func isTerminal(w io.Writer) bool {
+	f, ok := w.(*os.File)
+	return ok && isatty.IsTerminal(f.Fd())
 }

@@ -3,8 +3,13 @@ module github.com/DanielKirkwood/go-api
 go 1.27.1
 
 require (
+	github.com/go-chi/chi/v5 v5.3.2
+	github.com/lmittmann/tint v1.2.0
+	github.com/mattn/go-isatty v0.0.24
+	github.com/riandyrn/otelchi v0.12.3
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.71.0
 	go.opentelemetry.io/otel v1.46.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.46.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.46.0
@@ -17,6 +22,7 @@ require (
 require (
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect

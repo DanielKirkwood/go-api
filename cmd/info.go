@@ -30,6 +30,9 @@ func NewInfoCmd() *cobra.Command {
 
 	infoCmd.AddCommand(newInfoEnvCmd())
 	infoCmd.AddCommand(newInfoFeaturesCmd())
+	infoCmd.AddCommand(newInfoPublicRoutesCmd())
+	infoCmd.AddCommand(newInfoProtectedRoutesCmd())
+	infoCmd.AddCommand(newInfoHiddenRoutesCmd())
 
 	return infoCmd
 }

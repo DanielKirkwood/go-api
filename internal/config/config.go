@@ -18,7 +18,10 @@ import (
 type EnvVars struct {
 	Env      string `env:"ENV"       default:"development"`
 	LogLevel string `env:"LOG_LEVEL" default:"info"`
-	Port     string `env:"PORT"      default:"8080"`
+
+	PublicPort    string `env:"PUBLIC_PORT"    default:"8080"`
+	ProtectedPort string `env:"PROTECTED_PORT" default:"8081"`
+	HiddenPort    string `env:"HIDDEN_PORT"    default:"8082"`
 
 	DatabasePath string `env:"DATABASE_PATH"`
 

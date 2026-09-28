@@ -78,6 +78,7 @@ func NewRootCmd() *cobra.Command {
 	rootCmd.PersistentFlags().StringVarP(&logLevel, "log", "l", "", "Log level")
 
 	rootCmd.AddCommand(NewInfoCmd())
+	rootCmd.AddCommand(NewStartCmd())
 
 	return rootCmd
 }
