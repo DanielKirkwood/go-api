@@ -32,5 +32,10 @@ go.work
 # Local environment overrides
 .env
 
+# Local dev SQLite database (see Taskfile.yml's db:* tasks)
+dev.db
+dev.db-wal
+dev.db-shm
+
 # Local-only planning docs
 /docs/

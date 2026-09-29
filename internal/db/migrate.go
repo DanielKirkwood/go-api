@@ -1,0 +1,83 @@
+package db
+
+import (
+	"context"
+	"database/sql"
+	"embed"
+	"fmt"
+
+	"github.com/pressly/goose/v3"
+)
+
+// migrationsDirOnDisk is where `db create` writes new migration files — a
+// real filesystem path, since migrationsFS below is compiled in and
+// read-only at runtime.
+const migrationsDirOnDisk = "internal/db/migrations"
+
+// migrationsFSDir is the directory name goose looks up inside migrationsFS.
+const migrationsFSDir = "migrations"
+
+//go:embed migrations/*.sql
+var migrationsFS embed.FS
+
+// configureGoose points goose at the embedded migrations and the sqlite
+// dialect. It's cheap and idempotent, so every exported function below calls
+// it directly rather than caching the result behind package-level state.
+func configureGoose() error {
+	goose.SetBaseFS(migrationsFS)
+	if err := goose.SetDialect("sqlite"); err != nil {
+		return fmt.Errorf("db: set goose dialect: %w", err)
+	}
+
+	return nil
+}
+
+// Migrate applies every pending migration.
+func Migrate(ctx context.Context, sqlDB *sql.DB) error {
+	if err := configureGoose(); err != nil {
+		return err
+	}
+
+	if err := goose.UpContext(ctx, sqlDB, migrationsFSDir); err != nil {
+		return fmt.Errorf("db: migrate: %w", err)
+	}
+
+	return nil
+}
+
+// Rollback reverts the most recently applied migration.
+func Rollback(ctx context.Context, sqlDB *sql.DB) error {
+	if err := configureGoose(); err != nil {
+		return err
+	}
+
+	if err := goose.DownContext(ctx, sqlDB, migrationsFSDir); err != nil {
+		return fmt.Errorf("db: rollback: %w", err)
+	}
+
+	return nil
+}
+
+// Status prints which migrations are applied vs pending to goose's
+// configured output (stdout by default).
+func Status(ctx context.Context, sqlDB *sql.DB) error {
+	if err := configureGoose(); err != nil {
+		return err
+	}
+
+	if err := goose.StatusContext(ctx, sqlDB, migrationsFSDir); err != nil {
+		return fmt.Errorf("db: status: %w", err)
+	}
+
+	return nil
+}
+
+// Create scaffolds a new empty SQL migration file named name in
+// internal/db/migrations, writing to disk rather than the embedded FS.
+func Create(name string) error {
+	if err := goose.Create(nil, migrationsDirOnDisk, name, "sql"); err != nil {
+		return fmt.Errorf("db: create migration: %w", err)
+	}
+
+	return nil
+}

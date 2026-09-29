@@ -79,6 +79,7 @@ func NewRootCmd() *cobra.Command {
 
 	rootCmd.AddCommand(NewInfoCmd())
 	rootCmd.AddCommand(NewStartCmd())
+	rootCmd.AddCommand(NewDBCmd())
 
 	return rootCmd
 }

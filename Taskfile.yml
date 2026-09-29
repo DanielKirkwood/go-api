@@ -4,6 +4,7 @@ version: "3"
 
 vars:
     EXE: bin/go-api{{exeExt}}
+    DEV_DB_PATH: dev.db
 
 tasks:
     default:
@@ -34,6 +35,66 @@ tasks:
         desc: Lints the code
         cmds:
             - golangci-lint run
+
+    db:migrate:
+        desc: Apply all pending database migrations
+        deps: [build]
+        env:
+            DATABASE_PATH: "{{.DEV_DB_PATH}}"
+        cmds:
+            - ./{{.EXE}} db migrate --dev
+
+    db:rollback:
+        desc: Roll back the most recent database migration
+        deps: [build]
+        env:
+            DATABASE_PATH: "{{.DEV_DB_PATH}}"
+        cmds:
+            - ./{{.EXE}} db rollback --dev
+
+    db:create:
+        desc: "Create a new migration file (usage: task db:create -- add_widgets)"
+        deps: [build]
+        cmds:
+            - ./{{.EXE}} db create {{.CLI_ARGS}}
+
+    db:status:
+        desc: Show which migrations are applied vs pending
+        deps: [build]
+        env:
+            DATABASE_PATH: "{{.DEV_DB_PATH}}"
+        cmds:
+            - ./{{.EXE}} db status --dev
+
+    db:seed:
+        desc: Seed the database with development data
+        deps: [build]
+        env:
+            DATABASE_PATH: "{{.DEV_DB_PATH}}"
+        cmds:
+            - ./{{.EXE}} db seed --dev
+
+    db:reset:
+        desc: Drop the local dev SQLite file and re-run migrations from scratch
+        cmds:
+            - rm -f {{.DEV_DB_PATH}} {{.DEV_DB_PATH}}-wal {{.DEV_DB_PATH}}-shm
+            - task: db:migrate
+
+    sqlc:generate:
+        desc: Regenerate sqlc code from schema + queries
+        cmds:
+            - sqlc generate
+
+    sqlc:vet:
+        desc: Lint SQL queries against the live schema
+        cmds:
+            - sqlc vet
+
+    sqlc:check:
+        desc: Fail if committed generated code is stale (CI drift check)
+        cmds:
+            - sqlc generate
+            - git diff --exit-code internal/db/sqlc
 
     clean:
         desc: Clean every generated file

@@ -11,6 +11,7 @@ import (
 	"github.com/DanielKirkwood/go-api/internal/clients/logger"
 	"github.com/DanielKirkwood/go-api/internal/clients/otelclient"
 	"github.com/DanielKirkwood/go-api/internal/config"
+	"github.com/DanielKirkwood/go-api/internal/db"
 )
 
 // App holds every dependency constructed at startup: resolved config, the
@@ -25,6 +26,7 @@ type App struct {
 	Registry *config.Registry
 	Logger   *slog.Logger
 	Otel     *otelclient.Providers
+	Store    *db.Store
 	Servers  *Servers
 }
 
@@ -59,22 +61,33 @@ func Bootstrap(ctx context.Context, env config.EnvVars) (*App, error) {
 		return nil, fmt.Errorf("app: bootstrap otel: %w", err)
 	}
 
-	log.DebugContext(ctx, "bootstrap complete", "env", env.Env, "otel_enabled", otelFeature.Enabled)
+	dbFeature, _ := registry.Feature("database")
+	dbCfg, _ := dbFeature.Config.(config.DatabaseConfig)
 
-	return &App{Env: env, Registry: registry, Logger: log, Otel: providers}, nil
+	store, err := db.New(dbCfg, dbFeature.Enabled, providers.TracerProvider, providers.MeterProvider)
+	if err != nil {
+		return nil, fmt.Errorf("app: bootstrap database: %w", err)
+	}
+
+	log.DebugContext(ctx, "bootstrap complete",
+		"env", env.Env, "otel_enabled", otelFeature.Enabled, "database_enabled", dbFeature.Enabled)
+
+	return &App{Env: env, Registry: registry, Logger: log, Otel: providers, Store: store}, nil
 }
 
-// Shutdown gracefully closes every running server (if any), then flushes
-// the otel providers. Servers are closed first so no in-flight request's
-// spans/metrics are lost to a premature otel shutdown.
+// Shutdown gracefully closes every running server (if any), then the Store,
+// then flushes the otel providers. Servers close first so no in-flight
+// request's spans/metrics/queries are lost to a premature Store/otel
+// shutdown; the Store closes before otel so its instrumentation can still
+// flush.
 func (a *App) Shutdown(ctx context.Context) error {
 	if a.Servers != nil {
 		if err := a.Servers.Shutdown(ctx); err != nil {
-			return errors.Join(err, a.Otel.Shutdown(ctx))
+			return errors.Join(err, a.Store.Close(), a.Otel.Shutdown(ctx))
 		}
 	}
 
-	return a.Otel.Shutdown(ctx)
+	return errors.Join(a.Store.Close(), a.Otel.Shutdown(ctx))
 }
 
 // buildInfo derives the otel resource's service name/version from the

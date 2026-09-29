@@ -36,7 +36,7 @@ func BuildServers(a *App) (*Servers, error) {
 	deps := api.RouterDeps{
 		Logger:         a.Logger,
 		TracerProvider: a.Otel.TracerProvider,
-		Ready:          nil, // wired to a real DB ping in Phase 4
+		Ready:          a.Store.Ping,
 	}
 
 	return &Servers{
