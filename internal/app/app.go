@@ -114,15 +114,32 @@ func (a *App) Shutdown(ctx context.Context) error {
 	return errors.Join(a.Store.Close(), a.Otel.Shutdown(ctx))
 }
 
-// buildInfo derives the otel resource's service name/version from the
-// running binary's build info, the same source cmd's moduleName() uses.
+// Version is set via -ldflags "-X .../internal/app.Version=..." at build
+// time (see Dockerfile, .github/workflows/go.yml). It's empty for `go run`/
+// `go build` without that flag — buildInfo falls back to
+// [debug.ReadBuildInfo]'s VCS-stamped version there, which works for local
+// dev but not for a Docker build context: that copies source without .git,
+// so VCS stamping produces nothing useful inside a container image.
+//
+//nolint:gochecknoglobals // deliberate: the only way -ldflags -X can inject a value is into a package-level var.
+var Version string
+
+// buildInfo derives the otel resource's service name/version, preferring
+// the build-time-injected Version over the running binary's VCS-stamped
+// build info (the same source cmd's moduleName() uses for the name).
 func buildInfo() otelclient.BuildInfo {
 	info, ok := debug.ReadBuildInfo()
-	if !ok {
-		return otelclient.BuildInfo{Name: "go-api"}
+
+	name := "go-api"
+	if ok {
+		parts := strings.Split(info.Main.Path, "/")
+		name = parts[len(parts)-1]
 	}
 
-	parts := strings.Split(info.Main.Path, "/")
+	version := Version
+	if version == "" && ok {
+		version = info.Main.Version
+	}
 
-	return otelclient.BuildInfo{Name: parts[len(parts)-1], Version: info.Main.Version}
+	return otelclient.BuildInfo{Name: name, Version: version}
 }

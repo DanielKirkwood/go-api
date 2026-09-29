@@ -31,6 +31,7 @@ go.work
 
 # Local environment overrides
 .env
+deploy/production/.env.production
 
 # Local dev SQLite database (see Taskfile.yml's db:* tasks)
 dev.db
