@@ -1,33 +1,48 @@
 package config
 
-// Feature config stubs. These only hold data in Phase 1 — the subsystems
-// that consume them (routing/otel in Phase 2-3, database in Phase 4, Kratos
-// in Phase 5, Keto in Phase 6) are built out in later phases.
+// Feature config types hold each optional feature's settings, derived from
+// EnvVars by the Build func each Feature registers in DefaultRegistry.
+// Registry.Configure calls Build once ResolveFeatureEnabledState has
+// confirmed the feature is enabled, storing the result in Feature.Config.
+// Consumers (db.New, otelclient.New, kratosclient.New, ketoclient.New) take
+// the typed config instead of EnvVars, so they never see fields for
+// features they don't own.
 
-// ServiceConfig is the always-on core app config.
+// ServiceConfig configures the three HTTP server ports. It's the one
+// feature DefaultRegistry registers with no RequiredEnv, so
+// ResolveFeatureEnabledState always enables it.
 type ServiceConfig struct {
 	PublicPort    string
 	ProtectedPort string
 	HiddenPort    string
 }
 
-// DatabaseConfig configures the SQLite connection (Phase 4).
+// DatabaseConfig configures the SQLite connection db.New opens. It's only
+// built once the "database" feature is enabled, i.e. once DatabasePath is
+// set (see DefaultRegistry's RequiredEnv).
 type DatabaseConfig struct {
 	Path string
 }
 
-// OtelConfig configures the OpenTelemetry SDK bootstrap (Phase 2).
+// OtelConfig configures the OpenTelemetry SDK bootstrap otelclient.New
+// performs. It's only built once the "otel" feature is enabled, i.e. once
+// OtelExporterURL is set.
 type OtelConfig struct {
 	ExporterURL string
 }
 
-// KratosConfig configures the Ory Kratos client (Phase 5).
+// KratosConfig configures the Ory Kratos client kratosclient.New builds.
+// It's only built once the "kratos" feature is enabled, i.e. once both
+// KratosPublicURL and KratosAdminURL are set.
 type KratosConfig struct {
 	PublicURL string
 	AdminURL  string
 }
 
-// KetoConfig configures the Ory Keto client (Phase 6).
+// KetoConfig configures the Ory Keto client ketoclient.New builds. It's
+// only built once the "keto" feature is enabled, i.e. once KetoReadURL and
+// KetoWriteURL are set and its Requires dependency, "kratos", is also
+// enabled (see DefaultRegistry).
 type KetoConfig struct {
 	ReadURL  string
 	WriteURL string

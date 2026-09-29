@@ -32,8 +32,12 @@ var ErrIdentityNotFound = errors.New("kratosclient: identity not found")
 // enabled, so no code here needs to be nil-receiver-safe (contrast with
 // db.Store, which is used unconditionally).
 type Client struct {
+	// Public is the session-validation and self-service-flow client, used
+	// by ToSession.
 	Public *kratos.APIClient
-	Admin  *kratos.APIClient
+	// Admin is the identity-CRUD client, used by the
+	// Create/List/Get/Update/DeleteIdentity methods.
+	Admin *kratos.APIClient
 }
 
 // New builds a Client from cfg, with both the public and admin SDK clients'
@@ -60,7 +64,12 @@ func newAPIClient(url string) *kratos.APIClient {
 	return kratos.NewAPIClient(cfg)
 }
 
-// ToSession implements api.SessionValidator.
+// ToSession implements api.SessionValidator by exchanging cookieHeader (the
+// incoming request's raw Cookie header) for the session it identifies. An
+// invalid or expired session comes back from Kratos as a non-2xx response,
+// which is wrapped and returned as a plain error — unlike the identity
+// methods below, there is no sentinel for "no session", since callers only
+// need to know that validation failed.
 func (c *Client) ToSession(ctx context.Context, cookieHeader string) (*kratos.Session, error) {
 	session, resp, err := c.Public.FrontendAPI.ToSession(ctx).Cookie(cookieHeader).Execute()
 	closeBody(resp)
@@ -94,7 +103,10 @@ func (c *Client) CreateIdentity(ctx context.Context, traits map[string]any, pass
 	return identity, nil
 }
 
-// ListIdentities implements api.IdentityAdmin.
+// ListIdentities implements api.IdentityAdmin. It takes no pagination or
+// filter parameters, so it returns exactly what Kratos's admin identities
+// endpoint gives back for an unparameterized request — there is no way for
+// a caller to page through additional results.
 func (c *Client) ListIdentities(ctx context.Context) ([]kratos.Identity, error) {
 	identities, resp, err := c.Admin.IdentityAPI.ListIdentities(ctx).Execute()
 	closeBody(resp)
@@ -106,7 +118,9 @@ func (c *Client) ListIdentities(ctx context.Context) ([]kratos.Identity, error) 
 	return identities, nil
 }
 
-// GetIdentity implements api.IdentityAdmin.
+// GetIdentity implements api.IdentityAdmin. It returns ErrIdentityNotFound,
+// rather than the underlying Kratos error, when id does not match any
+// identity (a 404 response).
 func (c *Client) GetIdentity(ctx context.Context, id string) (*kratos.Identity, error) {
 	identity, resp, err := c.Admin.IdentityAPI.GetIdentity(ctx, id).Execute()
 	closeBody(resp)
@@ -119,7 +133,9 @@ func (c *Client) GetIdentity(ctx context.Context, id string) (*kratos.Identity, 
 }
 
 // UpdateIdentity implements api.IdentityAdmin, replacing the identity's
-// traits and state.
+// traits and state. It returns ErrIdentityNotFound, rather than the
+// underlying Kratos error, when id does not match any identity (a 404
+// response).
 func (c *Client) UpdateIdentity(
 	ctx context.Context,
 	id, state string,
@@ -137,7 +153,9 @@ func (c *Client) UpdateIdentity(
 	return identity, nil
 }
 
-// DeleteIdentity implements api.IdentityAdmin.
+// DeleteIdentity implements api.IdentityAdmin. It returns
+// ErrIdentityNotFound, rather than the underlying Kratos error, when id does
+// not match any identity (a 404 response).
 func (c *Client) DeleteIdentity(ctx context.Context, id string) error {
 	resp, err := c.Admin.IdentityAPI.DeleteIdentity(ctx, id).Execute()
 	closeBody(resp)

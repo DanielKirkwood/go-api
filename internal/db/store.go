@@ -17,9 +17,10 @@ import (
 )
 
 // maxOpenConns caps the pool at a single connection, matching SQLite's
-// single-writer constraint — see docs/implementation-plan.md's Phase 4 risk
-// note. WAL mode still lets readers avoid blocking on the OS level even
-// though every [sql.DB] user shares this one connection.
+// single-writer constraint: concurrent writers from separate connections
+// would otherwise race on SQLITE_BUSY. WAL mode still lets readers avoid
+// blocking on the OS level even though every [sql.DB] user shares this one
+// connection.
 const maxOpenConns = 1
 
 // busyTimeoutMS is how long a connection waits on SQLITE_BUSY before

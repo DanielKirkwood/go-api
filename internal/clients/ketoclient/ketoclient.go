@@ -21,7 +21,10 @@ import (
 // code here needs to be nil-receiver-safe (contrast with db.Store, which is
 // used unconditionally).
 type Client struct {
-	Read  *keto.APIClient
+	// Read is the permission-check client, used by CheckPermission.
+	Read *keto.APIClient
+	// Write is the relation-tuple CRUD client, used by CreateRelationTuple
+	// and DeleteRelationTuple.
 	Write *keto.APIClient
 }
 

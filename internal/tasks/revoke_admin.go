@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-//nolint:gochecknoinits // deliberate: self-registration, per implementation-plan.md's Phase 7 note that init()-based registration is fine to keep for tasks.
+//nolint:gochecknoinits // deliberate: self-registration pattern, see package doc.
 func init() {
 	Register(Task{
 		Name:         "revoke-admin",

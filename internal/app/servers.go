@@ -30,6 +30,12 @@ type Servers struct {
 // BuildServers constructs the three routers and the [http.Server] each is
 // bound to, using a's already-built Logger/Otel/Registry. It does not start
 // them — that's cmd/start.go's job.
+//
+// Each optional api.RouterDeps field (Auth, Authz, Widgets/WidgetsAdapter,
+// Identities/IdentitiesAdapter) is wired only when its backing feature
+// (kratos, keto, database) is enabled in a.Registry; otherwise it's left
+// nil, and the router constructors in internal/api skip the corresponding
+// middleware/routes.
 func BuildServers(a *App) (*Servers, error) {
 	serviceFeature, _ := a.Registry.Feature("service")
 	svcCfg, _ := serviceFeature.Config.(config.ServiceConfig)

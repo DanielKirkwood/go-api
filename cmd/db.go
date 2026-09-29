@@ -23,6 +23,17 @@ func NewDBCmd() *cobra.Command {
 	dbCmd := &cobra.Command{
 		Use:   "db",
 		Short: "Manage the database: migrations and seed data",
+		Long: `db manages the SQLite schema (via goose migrations) and seed data:
+
+  create <name>   scaffold a new empty migration file
+  migrate         apply every pending migration
+  rollback        revert the most recently applied migration
+  status          show which migrations are applied vs pending
+  seed            seed development data (currently: Keto admin relation tuples)
+
+migrate/rollback/status/seed all require the database feature to be enabled
+and the app to bootstrap successfully; create only writes a file to disk and
+needs neither.`,
 	}
 
 	dbCmd.AddCommand(newDBCreateCmd())
@@ -38,7 +49,11 @@ func newDBCreateCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "create [name]",
 		Short: "Scaffold a new empty migration file",
-		Args:  cobra.ExactArgs(1),
+		Long: `Writes a new, empty timestamped SQL migration file for [name] into
+the migrations directory, using goose's file naming convention. This only
+writes a file — it doesn't touch the database or require it to be configured.`,
+		Example: "  go-api db create add_users_table",
+		Args:    cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			return db.Create(args[0])
 		},
@@ -47,8 +62,9 @@ func newDBCreateCmd() *cobra.Command {
 
 func newDBMigrateCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "migrate",
-		Short: "Apply every pending migration",
+		Use:     "migrate",
+		Short:   "Apply every pending migration",
+		Example: "  go-api db migrate",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			store, err := storeFromContext(cmd)
 			if err != nil {
@@ -62,8 +78,10 @@ func newDBMigrateCmd() *cobra.Command {
 
 func newDBRollbackCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "rollback",
-		Short: "Revert the most recently applied migration",
+		Use:     "rollback",
+		Short:   "Revert the most recently applied migration",
+		Long:    `Reverts exactly one migration — the most recently applied one — not all of them.`,
+		Example: "  go-api db rollback",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			store, err := storeFromContext(cmd)
 			if err != nil {
@@ -77,8 +95,9 @@ func newDBRollbackCmd() *cobra.Command {
 
 func newDBStatusCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "status",
-		Short: "Show which migrations are applied vs pending",
+		Use:     "status",
+		Short:   "Show which migrations are applied vs pending",
+		Example: "  go-api db status",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			store, err := storeFromContext(cmd)
 			if err != nil {
@@ -94,6 +113,12 @@ func newDBSeedCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "seed",
 		Short: "Seed the database with development data",
+		Long: `Seeds development data. Currently this only seeds Keto relation
+tuples: it grants the Role:admin relation to the identity named by the
+KETO_SEED_ADMIN_IDENTITY_ID environment variable, and is a no-op if the keto
+feature isn't enabled. Requires KETO_SEED_ADMIN_IDENTITY_ID to be set when
+Keto is enabled, or the command errors.`,
+		Example: "  go-api db seed",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if _, err := storeFromContext(cmd); err != nil {
 				return err

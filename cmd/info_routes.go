@@ -11,17 +11,36 @@ import (
 )
 
 func newInfoPublicRoutesCmd() *cobra.Command {
-	return newInfoRoutesCmd("public-api-routes", "Print the public router's registered routes", api.NewPublicRouter)
+	c := newInfoRoutesCmd("public-api-routes", "Print the public router's registered routes", api.NewPublicRouter)
+	c.Long = `Builds the public router the same way it's built at server start and
+prints its METHOD/ROUTE table. Useful for confirming which unauthenticated
+endpoints are actually mounted without spinning up a listener.`
+	c.Example = "  go-api info public-api-routes"
+
+	return c
 }
 
 func newInfoProtectedRoutesCmd() *cobra.Command {
-	return newInfoRoutesCmd(
+	c := newInfoRoutesCmd(
 		"protected-api-routes", "Print the protected router's registered routes", api.NewProtectedRouter,
 	)
+	c.Long = `Builds the protected router the same way it's built at server start
+and prints its METHOD/ROUTE table. These routes require an authenticated
+Kratos session; this command only lists them, it doesn't call them.`
+	c.Example = "  go-api info protected-api-routes"
+
+	return c
 }
 
 func newInfoHiddenRoutesCmd() *cobra.Command {
-	return newInfoRoutesCmd("hidden-api-routes", "Print the hidden router's registered routes", api.NewHiddenRouter)
+	c := newInfoRoutesCmd("hidden-api-routes", "Print the hidden router's registered routes", api.NewHiddenRouter)
+	c.Long = `Builds the hidden router the same way it's built at server start and
+prints its METHOD/ROUTE table. The hidden router serves admin-only endpoints
+meant to be bound to an interface not exposed to the public internet; this
+command only lists its routes, it doesn't call them.`
+	c.Example = "  go-api info hidden-api-routes"
+
+	return c
 }
 
 func newInfoRoutesCmd(use, short string, build func(api.RouterDeps) *chi.Mux) *cobra.Command {

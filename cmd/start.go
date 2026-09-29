@@ -20,23 +20,41 @@ func NewStartCmd() *cobra.Command {
 	startCmd := &cobra.Command{
 		Use:   "start",
 		Short: "Start the public, protected, and hidden API servers together",
-		RunE:  runStart(selectAll),
+		Long: `Starts the public, protected, and hidden API servers in the same
+process and blocks until an interrupt/TERM signal arrives, then shuts down
+gracefully. Use the publicApi/protectedApi/hiddenApi subcommands instead to
+run and scale one router independently (e.g. as separate deployments).`,
+		Example: "  go-api start",
+		RunE:    runStart(selectAll),
 	}
 
 	startCmd.AddCommand(&cobra.Command{
 		Use:   "publicApi",
 		Short: "Start only the public API server",
-		RunE:  runStart(selectPublic),
+		Long: `Starts just the public router's server and blocks until an
+interrupt/TERM signal arrives, then shuts down gracefully. Use this to deploy
+or scale the public API independently of the protected and hidden ones.`,
+		Example: "  go-api start publicApi",
+		RunE:    runStart(selectPublic),
 	})
 	startCmd.AddCommand(&cobra.Command{
 		Use:   "protectedApi",
 		Short: "Start only the protected API server",
-		RunE:  runStart(selectProtected),
+		Long: `Starts just the protected router's server and blocks until an
+interrupt/TERM signal arrives, then shuts down gracefully. Use this to deploy
+or scale the protected API independently of the public and hidden ones.`,
+		Example: "  go-api start protectedApi",
+		RunE:    runStart(selectProtected),
 	})
 	startCmd.AddCommand(&cobra.Command{
 		Use:   "hiddenApi",
 		Short: "Start only the hidden API server",
-		RunE:  runStart(selectHidden),
+		Long: `Starts just the hidden router's server and blocks until an
+interrupt/TERM signal arrives, then shuts down gracefully. Use this to deploy
+the admin-only hidden API on its own, non-public-facing interface, independent
+of the public and protected servers.`,
+		Example: "  go-api start hiddenApi",
+		RunE:    runStart(selectHidden),
 	})
 
 	return startCmd

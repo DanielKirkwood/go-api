@@ -32,7 +32,10 @@ func configureGoose() error {
 	return nil
 }
 
-// Migrate applies every pending migration.
+// Migrate applies every pending migration in order, bringing sqlDB fully up
+// to date. It's what `db migrate` runs directly (cmd/db.go), and what test
+// setup calls before exercising sqlc queries. Safe to call when already up
+// to date — goose treats an empty pending set as a no-op.
 func Migrate(ctx context.Context, sqlDB *sql.DB) error {
 	if err := configureGoose(); err != nil {
 		return err
@@ -45,7 +48,9 @@ func Migrate(ctx context.Context, sqlDB *sql.DB) error {
 	return nil
 }
 
-// Rollback reverts the most recently applied migration.
+// Rollback reverts the single most recently applied migration — not a full
+// reset. It's what `db rollback` runs; call it repeatedly (once per
+// migration) to undo more than one step.
 func Rollback(ctx context.Context, sqlDB *sql.DB) error {
 	if err := configureGoose(); err != nil {
 		return err

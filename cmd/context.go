@@ -7,8 +7,8 @@ import (
 )
 
 // appContextKey is an unexported type so no other package can collide with
-// this key, mirroring the identity-in-context convention planned for the
-// auth middleware.
+// this key. The same pattern — an unexported empty struct as a context key —
+// is used by internal/api/auth.go's identityContextKey.
 type appContextKey struct{}
 
 // withApp returns a copy of ctx carrying a, retrievable via appFromContext.

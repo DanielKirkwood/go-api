@@ -37,6 +37,8 @@ type Deps struct {
 
 // Task describes one ad-hoc job runnable via `task exec <name>`.
 type Task struct {
+	// Name identifies the task: the key it's registered and looked up under,
+	// and the value passed to `task exec <name>` on the CLI.
 	Name string
 
 	// RequiredArgs lists the keys that must be present in Run's args map.
@@ -70,7 +72,10 @@ func All() []Task {
 	return out
 }
 
-// Get returns the named task and whether it exists.
+// Get looks up the task registered under name, e.g. for `task exec <name>`
+// to resolve before calling Run. ok is false when name was never
+// registered — a typo, or its defining file was never blank-imported so its
+// init() never ran.
 func Get(name string) (Task, bool) {
 	t, ok := registry[name]
 	return t, ok

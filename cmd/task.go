@@ -17,6 +17,11 @@ func NewTaskCmd() *cobra.Command {
 	taskCmd := &cobra.Command{
 		Use:   "task",
 		Short: "List and run ad-hoc operational tasks",
+		Long: `task lists and runs the ad-hoc operational jobs registered in
+internal/tasks (currently: grant-admin, revoke-admin, reseed-keto — all Keto
+relation-tuple maintenance). Run "go-api task list" to see what's registered
+and which --arg keys each one requires, then
+"go-api task exec <name> --arg key=value" to run one.`,
 	}
 
 	taskCmd.AddCommand(newTaskListCmd())
@@ -27,8 +32,9 @@ func NewTaskCmd() *cobra.Command {
 
 func newTaskListCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "list",
-		Short: "List every registered task",
+		Use:     "list",
+		Short:   "List every registered task",
+		Example: "  go-api task list",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			w := newTabWriter(cmd)
 
@@ -48,7 +54,14 @@ func newTaskExecCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "exec <name>",
 		Short: "Run a registered task by name",
-		Args:  cobra.ExactArgs(1),
+		Long: `Runs the registered task named <name>, failing with a descriptive
+error if any of its required --arg keys are missing (see "task list" for each
+task's required keys). Every task currently registered requires
+--arg identity-id=<id>.`,
+		Example: `  go-api task exec grant-admin --arg identity-id=<identity-id>
+  go-api task exec revoke-admin --arg identity-id=<identity-id>
+  go-api task exec reseed-keto --arg identity-id=<identity-id>`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, cmdArgs []string) error {
 			name := cmdArgs[0]
 
@@ -65,12 +78,15 @@ func newTaskExecCmd() *cobra.Command {
 				return errAppNotBootstrapped
 			}
 
-			// a.Keto is a typed *ketoclient.Client, nil when the keto
-			// feature is disabled. Only assign it into the Deps.Keto
-			// interface field when it's actually non-nil — wrapping a nil
-			// pointer in a non-nil interface would make deps.Keto == nil
-			// false inside the task, defeating every task's disabled-feature
-			// guard.
+			// a.Keto is a *ketoclient.Client (concrete type), nil when the
+			// keto feature is disabled. Assigning a nil *ketoclient.Client
+			// directly into the tasks.Deps.Keto interface field would
+			// produce a non-nil interface wrapping a nil pointer — Go's
+			// classic typed-nil-in-interface trap. deps.Keto == nil would
+			// then be false even though there's no real client, silently
+			// defeating every task's disabled-feature guard. Guarding the
+			// assignment here keeps deps.Keto genuinely nil when Keto is
+			// disabled.
 			var deps tasks.Deps
 			if a.Keto != nil {
 				deps.Keto = a.Keto

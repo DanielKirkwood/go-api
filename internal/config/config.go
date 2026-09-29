@@ -40,6 +40,10 @@ type EnvVars struct {
 	// through a Feature.
 	KetoSeedAdminIdentityID string `env:"KETO_SEED_ADMIN_IDENTITY_ID"`
 
+	// DisableFeatures is a comma-separated, case-insensitive list of feature
+	// names (e.g. "otel,keto") to force-disable even when their RequiredEnv
+	// is present. Registry.ResolveFeatureEnabledState reads it straight off
+	// EnvVars rather than through a Feature's Config.
 	DisableFeatures string `env:"DISABLE_FEATURES"`
 }
 

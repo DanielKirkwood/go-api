@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"text/tabwriter"
 
-	"github.com/DanielKirkwood/go-api/internal/config"
 	"github.com/spf13/cobra"
+
+	"github.com/DanielKirkwood/go-api/internal/config"
 )
 
 const redacted = "<redacted>"
@@ -26,6 +27,17 @@ func NewInfoCmd() *cobra.Command {
 	infoCmd := &cobra.Command{
 		Use:   "info",
 		Short: "Print diagnostic information about the resolved configuration",
+		Long: `info groups read-only introspection commands for answering "what
+does this build do right now?" without reading code:
+
+  env                    print resolved environment variables
+  features               print each feature flag's enabled/disabled state
+  public-api-routes      print the public router's registered routes
+  protected-api-routes   print the protected router's registered routes
+  hidden-api-routes      print the hidden router's registered routes
+
+All of these bootstrap the app the same way any other command does, so a
+broken configuration will surface here too.`,
 	}
 
 	infoCmd.AddCommand(newInfoEnvCmd())
@@ -41,6 +53,10 @@ func newInfoEnvCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "env",
 		Short: "Print resolved environment variables",
+		Long: `Prints every resolved environment variable as a NAME/VALUE table.
+Fields marked secret (e.g. API keys, credentials) are printed as <redacted>
+rather than their real value.`,
+		Example: "  go-api info env",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			a, ok := appFromContext(cmd.Context())
 			if !ok {
@@ -56,6 +72,11 @@ func newInfoFeaturesCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "features",
 		Short: "Print each feature's enabled/disabled state",
+		Long: `Prints a NAME/ENABLED/REASON table for every registered feature
+flag, then validates that every enabled feature's resolved configuration is
+actually usable (e.g. required env vars are set), returning an error if any
+enabled feature fails that check.`,
+		Example: "  go-api info features",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			a, ok := appFromContext(cmd.Context())
 			if !ok {

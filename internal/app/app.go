@@ -23,6 +23,13 @@ import (
 // Servers is nil until a command that serves HTTP (start and its
 // subcommands) calls BuildServers and assigns the result — commands like
 // `info` never need routers built.
+//
+// Store, Kratos, and Keto are nil when their feature is disabled, mirroring
+// their constructors' (db.New, kratosclient.New, ketoclient.New)
+// disabled-is-nil convention. Store's methods are nil-receiver safe since
+// Store is used unconditionally elsewhere; Kratos and Keto are not — they're
+// only wired into api.RouterDeps by BuildServers once their feature is known
+// to be enabled, so nothing ever calls them while nil.
 type App struct {
 	Env      config.EnvVars
 	Registry *config.Registry

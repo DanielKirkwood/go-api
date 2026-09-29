@@ -42,7 +42,10 @@ type updateIdentityRequest struct {
 
 // MountIdentities adds the admin identity CRUD example endpoints to r,
 // under /admin/identities, each routed through adapter so IdentityAdmin
-// errors become Problem responses.
+// errors become Problem responses. It's the hidden-router,
+// Kratos-admin-backed counterpart to MountWidgets' protected-router,
+// sqlc-backed example — copy whichever one matches the new resource: an
+// admin-only Kratos-fronted one, or an authenticated DB-backed one.
 func MountIdentities(r chi.Router, identities IdentityAdmin, adapter Adapter) {
 	r.Post("/admin/identities", adapter.Adapt(createIdentity(identities)))
 	r.Get("/admin/identities", adapter.Adapt(listIdentities(identities)))

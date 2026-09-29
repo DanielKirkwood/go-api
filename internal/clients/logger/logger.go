@@ -1,4 +1,7 @@
-// Package logger constructs the application's structured logger.
+// Package logger constructs the application's structured [slog.Logger]:
+// JSON output for production, tint-colorized human-readable output for
+// development, with color automatically disabled when the destination
+// isn't a terminal.
 package logger
 
 import (
@@ -22,6 +25,8 @@ type Config struct {
 	// "error" (case-insensitive).
 	Level string
 
+	// Writer is the destination for log output; nil defaults to
+	// [os.Stdout].
 	Writer io.Writer
 }
 

@@ -27,6 +27,12 @@ type Feature struct {
 	// Validate checks the built config for readiness. Nil skips validation.
 	Validate func(any) error
 
+	// Config, Enabled, and Reason are output fields, populated by
+	// ResolveFeatureEnabledState (Enabled, Reason) and Configure (Config) —
+	// both must run first for them to be meaningful. Config holds whatever
+	// concrete type Build returned (e.g. DatabaseConfig); callers type-assert
+	// it, the way app.Bootstrap does per feature. Reason explains a false
+	// Enabled, e.g. "missing required env: DatabasePath".
 	Config  any
 	Enabled bool
 	Reason  string
@@ -39,13 +45,17 @@ type Registry struct {
 	features map[string]Feature
 }
 
-// NewRegistry returns an empty registry.
+// NewRegistry returns an empty registry, with nothing registered. Use
+// DefaultRegistry for the app's real feature set; NewRegistry exists mainly
+// so tests can register a small, custom set of features to exercise
+// Registry's resolution logic in isolation.
 func NewRegistry() *Registry {
 	return &Registry{features: make(map[string]Feature)}
 }
 
 // Register adds a feature to the registry, preserving registration order for
-// All().
+// All(). Registering a name that's already present replaces its Feature but
+// keeps its original position in that order.
 func (r *Registry) Register(f Feature) {
 	if _, exists := r.features[f.Name]; !exists {
 		r.order = append(r.order, f.Name)
@@ -53,13 +63,18 @@ func (r *Registry) Register(f Feature) {
 	r.features[f.Name] = f
 }
 
-// Feature returns the named feature and whether it exists.
+// Feature returns the named feature and whether it exists. Call it after
+// ResolveFeatureEnabledState/Configure to read one feature's
+// Enabled/Config/Reason by name, as app.Bootstrap and app.BuildServers do
+// (e.g. "database", "otel", "kratos", "keto").
 func (r *Registry) Feature(name string) (Feature, bool) {
 	f, ok := r.features[name]
 	return f, ok
 }
 
-// All returns every registered feature in registration order.
+// All returns every registered feature in registration order, for
+// diagnostics that need every feature regardless of name — e.g. the `info`
+// command's feature listing (cmd/info.go).
 func (r *Registry) All() []Feature {
 	out := make([]Feature, 0, len(r.order))
 	for _, name := range r.order {
