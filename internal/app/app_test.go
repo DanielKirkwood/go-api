@@ -78,6 +78,58 @@ func TestBootstrapOtelEnabled(t *testing.T) {
 	_ = a.Shutdown(t.Context())
 }
 
+func TestBootstrapKratosDisabled(t *testing.T) {
+	t.Parallel()
+
+	env := config.EnvVars{Env: "development", LogLevel: "debug"}
+
+	a, err := app.Bootstrap(t.Context(), env)
+	if err != nil {
+		t.Fatalf("Bootstrap() error = %v, want nil", err)
+	}
+
+	kratosFeature, ok := a.Registry.Feature("kratos")
+	if !ok {
+		t.Fatal("kratos feature not registered")
+	}
+	if kratosFeature.Enabled {
+		t.Error("kratos feature Enabled = true, want false (no KRATOS_*_URL set)")
+	}
+	if a.Kratos != nil {
+		t.Errorf("Kratos = %+v, want nil", a.Kratos)
+	}
+}
+
+func TestBootstrapKratosEnabled(t *testing.T) {
+	t.Parallel()
+
+	env := config.EnvVars{
+		Env:             "production",
+		LogLevel:        "info",
+		KratosPublicURL: "http://127.0.0.1:4433",
+		KratosAdminURL:  "http://127.0.0.1:4434",
+	}
+
+	a, err := app.Bootstrap(t.Context(), env)
+	if err != nil {
+		t.Fatalf("Bootstrap() error = %v, want nil", err)
+	}
+
+	kratosFeature, ok := a.Registry.Feature("kratos")
+	if !ok {
+		t.Fatal("kratos feature not registered")
+	}
+	if !kratosFeature.Enabled {
+		t.Error("kratos feature Enabled = false, want true (KRATOS_*_URL set)")
+	}
+	if a.Kratos == nil {
+		t.Fatal("Kratos = nil, want non-nil")
+	}
+	if a.Kratos.Public == nil || a.Kratos.Admin == nil {
+		t.Error("Kratos.Public/Admin = nil, want non-nil")
+	}
+}
+
 func TestBootstrapUnknownLogLevel(t *testing.T) {
 	t.Parallel()
 

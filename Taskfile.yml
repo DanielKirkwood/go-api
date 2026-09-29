@@ -26,6 +26,11 @@ tasks:
         cmds:
             - go test ./...
 
+    test:e2e:
+        desc: Runs e2e tests (needs Docker; spins up its own Postgres/Kratos/mailslurper containers)
+        cmds:
+            - go test -tags=e2e ./...
+
     fmt:
         desc: Formats the code
         cmds:
@@ -95,6 +100,21 @@ tasks:
         cmds:
             - sqlc generate
             - git diff --exit-code internal/db/sqlc
+
+    kratos:up:
+        desc: Start the local dev Ory Kratos stack (Postgres, Kratos, self-service UI, mailslurper)
+        cmds:
+            - docker compose -f deploy/kratos/docker-compose.kratos.yml up --wait
+
+    kratos:down:
+        desc: Stop the local dev Ory Kratos stack
+        cmds:
+            - docker compose -f deploy/kratos/docker-compose.kratos.yml down
+
+    kratos:logs:
+        desc: Tail logs from the local dev Ory Kratos stack
+        cmds:
+            - docker compose -f deploy/kratos/docker-compose.kratos.yml logs -f
 
     clean:
         desc: Clean every generated file

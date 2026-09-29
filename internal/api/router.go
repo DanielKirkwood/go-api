@@ -20,6 +20,17 @@ type RouterDeps struct {
 	Logger         *slog.Logger
 	TracerProvider trace.TracerProvider
 	Ready          ReadyCheck
+
+	// Auth, when non-nil, is applied to the protected and hidden routers'
+	// routes (not /health/*). It is left nil when the kratos feature is
+	// disabled, matching this codebase's disabled-is-a-no-op convention.
+	Auth func(http.Handler) http.Handler
+
+	// Identities and IdentitiesAdapter, when non-nil, mount the admin
+	// identity CRUD example endpoints on the hidden router. Both are left
+	// nil when the kratos feature is disabled.
+	Identities        IdentityAdmin
+	IdentitiesAdapter Adapter
 }
 
 // NewPublicRouter builds the public router: the externally-facing surface.
@@ -28,15 +39,37 @@ func NewPublicRouter(deps RouterDeps) *chi.Mux {
 }
 
 // NewProtectedRouter builds the protected router: authenticated but
-// non-admin endpoints (Phase 5 adds the auth middleware here).
+// non-admin endpoints. Every route other than /health/* runs behind
+// deps.Auth, once Phase 7 starts mounting routes here.
 func NewProtectedRouter(deps RouterDeps) *chi.Mux {
-	return newRouter("protected", deps)
+	r := newRouter("protected", deps)
+
+	r.Group(func(r chi.Router) {
+		if deps.Auth != nil {
+			r.Use(deps.Auth)
+		}
+	})
+
+	return r
 }
 
 // NewHiddenRouter builds the hidden router: admin-only endpoints, meant to
-// be bound to an interface not exposed to the public internet.
+// be bound to an interface not exposed to the public internet. Every route
+// other than /health/* also runs behind deps.Auth, so Phase 6's
+// AuthorizationMiddleware has a resolved identity to build on.
 func NewHiddenRouter(deps RouterDeps) *chi.Mux {
-	return newRouter("hidden", deps)
+	r := newRouter("hidden", deps)
+
+	r.Group(func(r chi.Router) {
+		if deps.Auth != nil {
+			r.Use(deps.Auth)
+		}
+		if deps.Identities != nil {
+			MountIdentities(r, deps.Identities, deps.IdentitiesAdapter)
+		}
+	})
+
+	return r
 }
 
 func newRouter(name string, deps RouterDeps) *chi.Mux {

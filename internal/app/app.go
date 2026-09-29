@@ -8,6 +8,7 @@ import (
 	"runtime/debug"
 	"strings"
 
+	"github.com/DanielKirkwood/go-api/internal/clients/kratosclient"
 	"github.com/DanielKirkwood/go-api/internal/clients/logger"
 	"github.com/DanielKirkwood/go-api/internal/clients/otelclient"
 	"github.com/DanielKirkwood/go-api/internal/config"
@@ -27,6 +28,7 @@ type App struct {
 	Logger   *slog.Logger
 	Otel     *otelclient.Providers
 	Store    *db.Store
+	Kratos   *kratosclient.Client
 	Servers  *Servers
 }
 
@@ -69,10 +71,19 @@ func Bootstrap(ctx context.Context, env config.EnvVars) (*App, error) {
 		return nil, fmt.Errorf("app: bootstrap database: %w", err)
 	}
 
-	log.DebugContext(ctx, "bootstrap complete",
-		"env", env.Env, "otel_enabled", otelFeature.Enabled, "database_enabled", dbFeature.Enabled)
+	kratosFeature, _ := registry.Feature("kratos")
+	kratosCfg, _ := kratosFeature.Config.(config.KratosConfig)
 
-	return &App{Env: env, Registry: registry, Logger: log, Otel: providers, Store: store}, nil
+	kratos, err := kratosclient.New(kratosCfg, kratosFeature.Enabled)
+	if err != nil {
+		return nil, fmt.Errorf("app: bootstrap kratos: %w", err)
+	}
+
+	log.DebugContext(ctx, "bootstrap complete",
+		"env", env.Env, "otel_enabled", otelFeature.Enabled, "database_enabled", dbFeature.Enabled,
+		"kratos_enabled", kratosFeature.Enabled)
+
+	return &App{Env: env, Registry: registry, Logger: log, Otel: providers, Store: store, Kratos: kratos}, nil
 }
 
 // Shutdown gracefully closes every running server (if any), then the Store,

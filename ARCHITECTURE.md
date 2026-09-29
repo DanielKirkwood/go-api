@@ -21,3 +21,8 @@ Dependencies (the DB `Store`, and later the Kratos/Keto clients) are constructed
 passed down explicitly through constructors — not fetched via package-level `GetXClient()`-style
 singleton getters. This is what makes each piece testable as a plain Go value instead of requiring
 global state to be mocked.
+
+## See also
+
+- [`deploy/kratos/README.md`](deploy/kratos/README.md) — running self-hosted Ory Kratos locally
+  and what changes for production.

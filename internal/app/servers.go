@@ -9,6 +9,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/DanielKirkwood/go-api/internal/api"
+	"github.com/DanielKirkwood/go-api/internal/clients/kratosclient"
 	"github.com/DanielKirkwood/go-api/internal/config"
 )
 
@@ -37,6 +38,25 @@ func BuildServers(a *App) (*Servers, error) {
 		Logger:         a.Logger,
 		TracerProvider: a.Otel.TracerProvider,
 		Ready:          a.Store.Ping,
+	}
+
+	kratosFeature, _ := a.Registry.Feature("kratos")
+	if kratosFeature.Enabled {
+		deps.Auth = api.AuthenticationMiddleware(a.Kratos)
+		deps.Identities = a.Kratos
+		deps.IdentitiesAdapter = api.Adapter{
+			Logger: a.Logger,
+			ErrorsMap: api.ErrorsMap{
+				{
+					Match: kratosclient.ErrIdentityNotFound,
+					Problem: api.Problem{
+						Status: http.StatusNotFound,
+						Title:  "Not Found",
+						Detail: "identity not found",
+					},
+				},
+			},
+		}
 	}
 
 	return &Servers{
