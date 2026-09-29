@@ -116,6 +116,33 @@ tasks:
         cmds:
             - docker compose -f deploy/kratos/docker-compose.kratos.yml logs -f
 
+    keto:up:
+        desc: Start the local dev Ory Keto stack (Postgres, Keto)
+        cmds:
+            - docker compose -f deploy/keto/docker-compose.keto.yml up --wait
+
+    keto:down:
+        desc: Stop the local dev Ory Keto stack
+        cmds:
+            - docker compose -f deploy/keto/docker-compose.keto.yml down
+
+    keto:logs:
+        desc: Tail logs from the local dev Ory Keto stack
+        cmds:
+            - docker compose -f deploy/keto/docker-compose.keto.yml logs -f
+
+    auth:up:
+        desc: Start the full local dev auth stack (Kratos + Keto)
+        cmds:
+            - task: kratos:up
+            - task: keto:up
+
+    auth:down:
+        desc: Stop the full local dev auth stack (Kratos + Keto)
+        cmds:
+            - task: keto:down
+            - task: kratos:down
+
     clean:
         desc: Clean every generated file
         cmds:

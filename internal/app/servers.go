@@ -59,6 +59,15 @@ func BuildServers(a *App) (*Servers, error) {
 		}
 	}
 
+	ketoFeature, _ := a.Registry.Feature("keto")
+	if ketoFeature.Enabled {
+		// The hidden router's admin identity CRUD endpoints are the
+		// concrete resource Phase 6 protects; a real domain resource lands
+		// in Phase 7. See deploy/keto/identities.ts for the OPL namespace
+		// this namespace/object/relation triple checks against.
+		deps.Authz = api.AuthorizationMiddleware(a.Keto, "Identities", "admin", "manage")
+	}
+
 	return &Servers{
 		Public:    newServer(svcCfg.PublicPort, "public", api.NewPublicRouter(deps), a),
 		Protected: newServer(svcCfg.ProtectedPort, "protected", api.NewProtectedRouter(deps), a),

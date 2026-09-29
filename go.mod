@@ -7,6 +7,7 @@ require (
 	github.com/go-chi/chi/v5 v5.3.2
 	github.com/lmittmann/tint v1.2.0
 	github.com/mattn/go-isatty v0.0.24
+	github.com/ory/keto-client-go/v26 v26.2.0
 	github.com/ory/kratos-client-go/v26 v26.2.0
 	github.com/pressly/goose/v3 v3.28.0
 	github.com/riandyrn/otelchi v0.12.3

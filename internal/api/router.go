@@ -26,6 +26,10 @@ type RouterDeps struct {
 	// disabled, matching this codebase's disabled-is-a-no-op convention.
 	Auth func(http.Handler) http.Handler
 
+	// Authz, when non-nil, is applied to the hidden router's routes, after
+	// Auth. It is left nil when the keto feature is disabled.
+	Authz func(http.Handler) http.Handler
+
 	// Identities and IdentitiesAdapter, when non-nil, mount the admin
 	// identity CRUD example endpoints on the hidden router. Both are left
 	// nil when the kratos feature is disabled.
@@ -55,14 +59,18 @@ func NewProtectedRouter(deps RouterDeps) *chi.Mux {
 
 // NewHiddenRouter builds the hidden router: admin-only endpoints, meant to
 // be bound to an interface not exposed to the public internet. Every route
-// other than /health/* also runs behind deps.Auth, so Phase 6's
-// AuthorizationMiddleware has a resolved identity to build on.
+// other than /health/* also runs behind deps.Auth, then deps.Authz — the
+// admin identity CRUD endpoints require both a valid session and the
+// "manage" relation on the Identities:admin object (see deploy/keto).
 func NewHiddenRouter(deps RouterDeps) *chi.Mux {
 	r := newRouter("hidden", deps)
 
 	r.Group(func(r chi.Router) {
 		if deps.Auth != nil {
 			r.Use(deps.Auth)
+		}
+		if deps.Authz != nil {
+			r.Use(deps.Authz)
 		}
 		if deps.Identities != nil {
 			MountIdentities(r, deps.Identities, deps.IdentitiesAdapter)

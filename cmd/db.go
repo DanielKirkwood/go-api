@@ -4,12 +4,18 @@ import (
 	"errors"
 	"fmt"
 
+	keto "github.com/ory/keto-client-go/v26"
 	"github.com/spf13/cobra"
 
 	"github.com/DanielKirkwood/go-api/internal/db"
 )
 
-var errDatabaseNotConfigured = errors.New("cmd: database feature is not enabled")
+var (
+	errDatabaseNotConfigured           = errors.New("cmd: database feature is not enabled")
+	errKetoSeedAdminIdentityIDRequired = errors.New(
+		"cmd: KETO_SEED_ADMIN_IDENTITY_ID must be set to seed Keto relation tuples",
+	)
+)
 
 // NewDBCmd builds the `db` command group: migration and seed management
 // against the bootstrapped app's Store.
@@ -93,13 +99,50 @@ func newDBSeedCmd() *cobra.Command {
 				return err
 			}
 
-			// Seed data is introduced alongside the first real domain
-			// table in Phase 7 — nothing to seed yet.
-			fmt.Fprintln(cmd.OutOrStdout(), "db seed: nothing to seed yet")
+			// SQLite domain data is introduced alongside the first real
+			// domain table in Phase 7 — nothing to seed there yet. Keto
+			// relation-tuple seeding lands in Phase 6, so it's the only
+			// seed data today.
+			if err := seedKeto(cmd); err != nil {
+				return err
+			}
+
+			fmt.Fprintln(cmd.OutOrStdout(), "db seed: seeded Keto relation tuples")
 
 			return nil
 		},
 	}
+}
+
+// seedKeto grants the Role:admin relation tuple to
+// EnvVars.KetoSeedAdminIdentityID and makes Identities:admin's manage
+// permission traverse that role, matching deploy/keto/identities.ts's OPL.
+// It's a no-op when the keto feature is disabled.
+func seedKeto(cmd *cobra.Command) error {
+	a, ok := appFromContext(cmd.Context())
+	if !ok {
+		return errAppNotBootstrapped
+	}
+	if a.Keto == nil {
+		return nil
+	}
+	if a.Env.KetoSeedAdminIdentityID == "" {
+		return errKetoSeedAdminIdentityIDRequired
+	}
+
+	ctx := cmd.Context()
+	adminIdentityID := a.Env.KetoSeedAdminIdentityID
+
+	if err := a.Keto.CreateRelationTuple(ctx, "Role", "admin", "members", &adminIdentityID, nil); err != nil {
+		return fmt.Errorf("cmd: seed keto admin role member: %w", err)
+	}
+
+	managerRole := &keto.SubjectSet{Namespace: "Role", Object: "admin", Relation: "members"}
+	if err := a.Keto.CreateRelationTuple(ctx, "Identities", "admin", "managers", nil, managerRole); err != nil {
+		return fmt.Errorf("cmd: seed keto identities manager: %w", err)
+	}
+
+	return nil
 }
 
 // storeFromContext returns the bootstrapped app's *db.Store, erroring if the

@@ -33,6 +33,13 @@ type EnvVars struct {
 	KetoReadURL  string `env:"KETO_READ_URL"`
 	KetoWriteURL string `env:"KETO_WRITE_URL"`
 
+	// KetoSeedAdminIdentityID is the Kratos identity ID `db seed` grants
+	// the Role:admin relation tuple to. Not part of KetoConfig/the keto
+	// feature's readiness — it's only consumed directly by `db seed`, the
+	// same way DisableFeatures is read straight off EnvVars rather than
+	// through a Feature.
+	KetoSeedAdminIdentityID string `env:"KETO_SEED_ADMIN_IDENTITY_ID"`
+
 	DisableFeatures string `env:"DISABLE_FEATURES"`
 }
 

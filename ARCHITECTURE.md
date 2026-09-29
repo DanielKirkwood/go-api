@@ -26,3 +26,5 @@ global state to be mocked.
 
 - [`deploy/kratos/README.md`](deploy/kratos/README.md) — running self-hosted Ory Kratos locally
   and what changes for production.
+- [`deploy/keto/README.md`](deploy/keto/README.md) — running self-hosted Ory Keto locally and
+  what changes for production.
