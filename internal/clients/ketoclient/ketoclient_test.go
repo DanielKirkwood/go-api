@@ -65,6 +65,10 @@ func fakeKeto(t *testing.T) *httptest.Server {
 		})
 	})
 
+	mux.HandleFunc("DELETE /admin/relation-tuples", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+
 	server := httptest.NewServer(mux)
 	t.Cleanup(server.Close)
 
@@ -131,5 +135,21 @@ func TestClient_CreateRelationTuple(t *testing.T) {
 	subjectSet := &keto.SubjectSet{Namespace: "Role", Object: "admin", Relation: "members"}
 	if err := client.CreateRelationTuple(t.Context(), "Identities", "admin", "managers", nil, subjectSet); err != nil {
 		t.Fatalf("CreateRelationTuple() with subject set error = %v, want nil", err)
+	}
+}
+
+func TestClient_DeleteRelationTuple(t *testing.T) {
+	t.Parallel()
+
+	client := testClient(t, fakeKeto(t))
+
+	subjectID := "identity-1"
+	if err := client.DeleteRelationTuple(t.Context(), "Role", "admin", "members", &subjectID, nil); err != nil {
+		t.Fatalf("DeleteRelationTuple() error = %v, want nil", err)
+	}
+
+	subjectSet := &keto.SubjectSet{Namespace: "Role", Object: "admin", Relation: "members"}
+	if err := client.DeleteRelationTuple(t.Context(), "Identities", "admin", "managers", nil, subjectSet); err != nil {
+		t.Fatalf("DeleteRelationTuple() with subject set error = %v, want nil", err)
 	}
 }

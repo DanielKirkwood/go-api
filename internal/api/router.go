@@ -35,6 +35,12 @@ type RouterDeps struct {
 	// nil when the kratos feature is disabled.
 	Identities        IdentityAdmin
 	IdentitiesAdapter Adapter
+
+	// Widgets and WidgetsAdapter, when non-nil, mount the widget CRUD
+	// example endpoints on the protected router. Both are left nil when the
+	// database feature is disabled.
+	Widgets        WidgetStore
+	WidgetsAdapter Adapter
 }
 
 // NewPublicRouter builds the public router: the externally-facing surface.
@@ -44,13 +50,17 @@ func NewPublicRouter(deps RouterDeps) *chi.Mux {
 
 // NewProtectedRouter builds the protected router: authenticated but
 // non-admin endpoints. Every route other than /health/* runs behind
-// deps.Auth, once Phase 7 starts mounting routes here.
+// deps.Auth — the widget CRUD example endpoints are the first (and so far
+// only) routes mounted here.
 func NewProtectedRouter(deps RouterDeps) *chi.Mux {
 	r := newRouter("protected", deps)
 
 	r.Group(func(r chi.Router) {
 		if deps.Auth != nil {
 			r.Use(deps.Auth)
+		}
+		if deps.Widgets != nil {
+			MountWidgets(r, deps.Widgets, deps.WidgetsAdapter)
 		}
 	})
 

@@ -95,6 +95,41 @@ func (c *Client) CreateRelationTuple(
 	return nil
 }
 
+// DeleteRelationTuple deletes the relation tuple(s) matching
+// namespace:object#relation@subject, where subject is either a bare
+// subjectID or a subjectSet — exactly one of the two must be non-nil,
+// mirroring CreateRelationTuple's contract. Unlike CreateRelationTuple,
+// Keto's delete endpoint takes the tuple as query parameters, not a body.
+func (c *Client) DeleteRelationTuple(
+	ctx context.Context,
+	namespace, object, relation string,
+	subjectID *string,
+	subjectSet *keto.SubjectSet,
+) error {
+	req := c.Write.RelationshipAPI.DeleteRelationships(ctx).
+		Namespace(namespace).
+		Object(object).
+		Relation(relation)
+
+	if subjectID != nil {
+		req = req.SubjectId(*subjectID)
+	}
+	if subjectSet != nil {
+		req = req.SubjectSetNamespace(subjectSet.Namespace).
+			SubjectSetObject(subjectSet.Object).
+			SubjectSetRelation(subjectSet.Relation)
+	}
+
+	resp, err := req.Execute()
+	closeBody(resp)
+
+	if err != nil {
+		return fmt.Errorf("ketoclient: delete relation tuple: %w", err)
+	}
+
+	return nil
+}
+
 // closeBody closes resp's body, if resp is non-nil. Every SDK method here
 // returns a [http.Response] alongside its error, and the response body must
 // be closed either way to avoid leaking the underlying connection.

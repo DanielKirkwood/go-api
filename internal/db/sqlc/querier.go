@@ -9,7 +9,12 @@ import (
 )
 
 type Querier interface {
+	CreateWidget(ctx context.Context, name string) (Widget, error)
+	DeleteWidget(ctx context.Context, id int64) error
+	GetWidget(ctx context.Context, id int64) (Widget, error)
+	ListWidgets(ctx context.Context) ([]Widget, error)
 	Ping(ctx context.Context) (int64, error)
+	UpdateWidget(ctx context.Context, arg UpdateWidgetParams) (Widget, error)
 }
 
 var _ Querier = (*Queries)(nil)

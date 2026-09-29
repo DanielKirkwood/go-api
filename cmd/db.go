@@ -4,10 +4,10 @@ import (
 	"errors"
 	"fmt"
 
-	keto "github.com/ory/keto-client-go/v26"
 	"github.com/spf13/cobra"
 
 	"github.com/DanielKirkwood/go-api/internal/db"
+	"github.com/DanielKirkwood/go-api/internal/tasks"
 )
 
 var (
@@ -117,7 +117,9 @@ func newDBSeedCmd() *cobra.Command {
 // seedKeto grants the Role:admin relation tuple to
 // EnvVars.KetoSeedAdminIdentityID and makes Identities:admin's manage
 // permission traverse that role, matching deploy/keto/identities.ts's OPL.
-// It's a no-op when the keto feature is disabled.
+// It's a no-op when the keto feature is disabled. The actual seeding is
+// tasks.SeedKetoAdmin, shared with `task exec reseed-keto` so the two entry
+// points can't drift out of sync.
 func seedKeto(cmd *cobra.Command) error {
 	a, ok := appFromContext(cmd.Context())
 	if !ok {
@@ -130,16 +132,8 @@ func seedKeto(cmd *cobra.Command) error {
 		return errKetoSeedAdminIdentityIDRequired
 	}
 
-	ctx := cmd.Context()
-	adminIdentityID := a.Env.KetoSeedAdminIdentityID
-
-	if err := a.Keto.CreateRelationTuple(ctx, "Role", "admin", "members", &adminIdentityID, nil); err != nil {
-		return fmt.Errorf("cmd: seed keto admin role member: %w", err)
-	}
-
-	managerRole := &keto.SubjectSet{Namespace: "Role", Object: "admin", Relation: "members"}
-	if err := a.Keto.CreateRelationTuple(ctx, "Identities", "admin", "managers", nil, managerRole); err != nil {
-		return fmt.Errorf("cmd: seed keto identities manager: %w", err)
+	if err := tasks.SeedKetoAdmin(cmd.Context(), a.Keto, a.Env.KetoSeedAdminIdentityID); err != nil {
+		return fmt.Errorf("cmd: seed keto: %w", err)
 	}
 
 	return nil

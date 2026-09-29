@@ -62,10 +62,32 @@ func BuildServers(a *App) (*Servers, error) {
 	ketoFeature, _ := a.Registry.Feature("keto")
 	if ketoFeature.Enabled {
 		// The hidden router's admin identity CRUD endpoints are the
-		// concrete resource Phase 6 protects; a real domain resource lands
-		// in Phase 7. See deploy/keto/identities.ts for the OPL namespace
-		// this namespace/object/relation triple checks against.
+		// concrete resource Phase 6 protects. See deploy/keto/identities.ts
+		// for the OPL namespace this namespace/object/relation triple
+		// checks against.
 		deps.Authz = api.AuthorizationMiddleware(a.Keto, "Identities", "admin", "manage")
+	}
+
+	dbFeature, _ := a.Registry.Feature("database")
+	if dbFeature.Enabled {
+		// The protected router's widget CRUD endpoints are Phase 7's
+		// example resource: sqlc-backed persistence behind Auth only (no
+		// authz), the one combination the hidden-router identity example
+		// doesn't already cover.
+		deps.Widgets = storeWidgets{store: a.Store}
+		deps.WidgetsAdapter = api.Adapter{
+			Logger: a.Logger,
+			ErrorsMap: api.ErrorsMap{
+				{
+					Match: api.ErrWidgetNotFound,
+					Problem: api.Problem{
+						Status: http.StatusNotFound,
+						Title:  "Not Found",
+						Detail: "widget not found",
+					},
+				},
+			},
+		}
 	}
 
 	return &Servers{
