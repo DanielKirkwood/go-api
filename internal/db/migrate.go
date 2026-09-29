@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"embed"
 	"fmt"
+	"sync"
 
 	"github.com/pressly/goose/v3"
 )
@@ -20,16 +21,32 @@ const migrationsFSDir = "migrations"
 //go:embed migrations/*.sql
 var migrationsFS embed.FS
 
-// configureGoose points goose at the embedded migrations and the sqlite
-// dialect. It's cheap and idempotent, so every exported function below calls
-// it directly rather than caching the result behind package-level state.
-func configureGoose() error {
-	goose.SetBaseFS(migrationsFS)
-	if err := goose.SetDialect("sqlite"); err != nil {
-		return fmt.Errorf("db: set goose dialect: %w", err)
-	}
+// configureGooseOnce guards the one-time call into goose's package-level
+// SetBaseFS/SetDialect setters. Those setters mutate goose's own unsynchronized
+// global state, so calling configureGoose from concurrent tests (internal/db's
+// t.Parallel() tests all call Migrate/Status/Rollback) races unless the actual
+// mutation happens exactly once; the values set never change between calls,
+// so doing it once is both sufficient and correct.
+//
+//nolint:gochecknoglobals // deliberate: memoizes an unsynchronized goose package-level setter, not application state.
+var (
+	configureGooseOnce sync.Once
+	errConfigureGoose  error
+)
 
-	return nil
+// configureGoose points goose at the embedded migrations and the sqlite
+// dialect. Every exported function below calls it directly; [sync.Once] makes
+// repeated calls (including concurrent ones from parallel tests) cheap and
+// race-free instead of re-running goose's global setters each time.
+func configureGoose() error {
+	configureGooseOnce.Do(func() {
+		goose.SetBaseFS(migrationsFS)
+		if err := goose.SetDialect("sqlite"); err != nil {
+			errConfigureGoose = fmt.Errorf("db: set goose dialect: %w", err)
+		}
+	})
+
+	return errConfigureGoose
 }
 
 // Migrate applies every pending migration in order, bringing sqlDB fully up
